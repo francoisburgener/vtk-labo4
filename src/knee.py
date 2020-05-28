@@ -4,22 +4,24 @@ import time
 
 def read_slc_file(filename):
     print("Reading SLC file")
-    reader = vtk.vtkSTLReader()
+    reader = vtk.vtkSLCReader()
     reader.SetFileName(filename)
     reader.Update()
+
+    print(reader)
     return reader
 
 
 def main():
     start = time.perf_counter()
-    stl_data = read_slc_file('vw_knee.slc')
+    slc_data = read_slc_file('vw_knee.slc')
     end = time.perf_counter()
 
     print(f"Reading SLC file in {end - start:0.4f} seconds")
 
     print("Create mapper")
     mapper = vtk.vtkPolyDataMapper()
-    mapper.SetInputConnection(stl_data.GetOutputPort())
+    mapper.SetInputConnection(slc_data.GetOutputPort())
 
     print("Create actor")
     actor = vtk.vtkActor()
