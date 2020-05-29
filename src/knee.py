@@ -38,7 +38,7 @@ def make_camera():
     cam.SetPosition(0, 1, 0)
     cam.SetViewUp(0, 0, 1)
     cam.Roll(180.)
-    cam.Azimuth(180.)
+    cam.Azimuth(90.)  # TODO 180
 
     return cam
 
@@ -91,6 +91,44 @@ def actors_step_1(contour_filter_leg):
     return [actor_tube]
 
 
+def actors_step_2(contour_filter_leg, mapper_leg):
+    sphere = vtk.vtkSphere()
+    sphere.SetRadius(50)
+    sphere.SetCenter(75, 35, 110)
+
+    clipper = vtk.vtkClipPolyData()
+    clipper.SetInputConnection(contour_filter_leg.GetOutputPort())
+    clipper.SetClipFunction(sphere)
+    clipper.SetValue(0)
+    clipper.Update()
+
+    mapper = vtk.vtkDataSetMapper()
+    mapper.SetInputData(clipper.GetOutput())
+    mapper.ScalarVisibilityOff()
+
+    actor_leg = vtk.vtkActor()
+    actor_leg.SetMapper(mapper)
+
+    actor_leg.GetProperty().SetOpacity(0.666)
+    actor_leg.GetProperty().SetColor(colors.GetColor3d("pink_light"))
+    prop = vtk.vtkProperty()
+    prop.SetColor(colors.GetColor3d("pink_light"))
+    actor_leg.SetBackfaceProperty(prop)
+
+    return [actor_leg]
+
+
+def actors_step_3(mapper_leg):
+    # LEG
+    actor_leg = vtk.vtkActor()
+
+    actor_leg.GetProperty().SetColor(colors.GetColor3d("pink_light"))
+
+    actor_leg.SetMapper(mapper_leg)
+
+    return [actor_leg]
+
+
 def main():
     start = time.perf_counter()
     reader_slc_data = read_slc_file('vw_knee.slc')
@@ -114,11 +152,6 @@ def main():
     actor_leg = vtk.vtkActor()
     # Step 2
 
-    actor_leg.GetProperty().SetOpacity(0.8)
-    prop = vtk.vtkProperty()
-    prop.SetColor(colors.GetColor3d("pink_light"))
-    actor_leg.SetBackfaceProperty(prop)
-
     actor_outline = vtk.vtkActor()
     actor_outline.SetMapper(mapper_outline)
     actor_outline.GetProperty().SetColor(colors.GetColor3d("ivory_black"))
@@ -132,11 +165,13 @@ def main():
 
     actors_list = [actor_bone,  actor_outline]
 
+    print(actor_outline)
+
     cam = make_camera()
 
     ren_1 = get_renderer(actors_list + actors_step_1(contour_filter_leg), colors.GetColor3d("pink_light"), cam)
-    ren_2 = get_renderer(actors_list + [actor_leg], colors.GetColor3d("green_pale"), cam)
-    ren_3 = get_renderer(actors_list, colors.GetColor3d("plum"), cam)
+    ren_2 = get_renderer(actors_list + actors_step_2(contour_filter_leg, mapper_leg), colors.GetColor3d("green_pale"), cam)
+    ren_3 = get_renderer(actors_list + actors_step_3(mapper_leg), colors.GetColor3d("plum"), cam)
     ren_4 = get_renderer(actors_list, colors.GetColor3d("light_grey"), cam)
 
     top_left = (0, 0.5, 0.5, 1)
