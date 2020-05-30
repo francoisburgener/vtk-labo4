@@ -46,7 +46,7 @@ def make_camera():
     cam.SetPosition(0, 1, 0)
     cam.SetViewUp(0, 0, 1)
     cam.Roll(180.)
-    cam.Azimuth(180.)  # TODO 180
+    cam.Azimuth(90.)  # TODO 180
 
     return cam
 
@@ -141,7 +141,7 @@ def actors_step_3(contour_filter_leg):
     sample = vtk.vtkSampleFunction()
     sample.SetImplicitFunction(sphere)
     sample.SetModelBounds(-200.5, 200.5, -200.5, 200.5, -200.5, 200.5)
-    sample.SetSampleDimensions(20, 20, 20)
+    sample.SetSampleDimensions(200, 200, 200)
     sample.ComputeNormalsOff()
 
     contour_filter = vtk.vtkContourFilter()
@@ -155,7 +155,7 @@ def actors_step_3(contour_filter_leg):
     actor = vtk.vtkActor()
     actor.SetMapper(mapper)
     actor.GetProperty().SetColor(colors.GetColor3d("sphere"))
-    actor.GetProperty().SetOpacity(0.5)
+    actor.GetProperty().SetOpacity(0.4)
 
     return [actor_leg, actor]
 
