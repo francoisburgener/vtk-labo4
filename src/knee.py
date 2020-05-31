@@ -1,3 +1,7 @@
+"""
+VTK - HEIG - Lab04
+authors: François Burgener, Tiago Povoa Quinteiro
+"""
 import os
 import time
 import vtk
@@ -13,6 +17,15 @@ colors.SetColor("background_step3", [205, 203, 255, 255])
 colors.SetColor("background_step4", [205, 203, 205, 255])
 
 FILENAME_STEP_4 = "step4.vtk"
+
+# Values we found to get the data from the SLC
+# Change them if you need to refine something
+BONE_VALUE = 72.0
+LEG_VALUE = 47.0
+
+# Window parameters (with/height)
+WINDOW_WIDTH = 800
+WINDOW_HEIGHT = 800
 
 
 def read_slc_file(filename):
@@ -278,8 +291,8 @@ def main():
     outline = vtk.vtkOutlineFilter()
     outline.SetInputConnection(reader_slc_data.GetOutputPort())
 
-    mapper_bone, _ = get_mapper(reader_slc_data, 72.0)
-    mapper_leg, contour_filter_leg = get_mapper(reader_slc_data, 47.0)
+    mapper_bone, _ = get_mapper(reader_slc_data, BONE_VALUE)
+    mapper_leg, contour_filter_leg = get_mapper(reader_slc_data, LEG_VALUE)
 
     mapper_outline = vtk.vtkPolyDataMapper()
     mapper_outline.SetInputConnection(outline.GetOutputPort())
@@ -288,13 +301,10 @@ def main():
     actor_bone = vtk.vtkActor()
     actor_bone.GetProperty().SetColor(colors.GetColor3d("BoneColor"))
     actor_leg = vtk.vtkActor()
-    # Step 2
 
     actor_outline = vtk.vtkActor()
     actor_outline.SetMapper(mapper_outline)
     actor_outline.GetProperty().SetColor(colors.GetColor3d("ivory_black"))
-
-    # actor_leg.GetProperty().SetColor(colors.GetColor3d("pink_light"))
 
     actor_bone.SetMapper(mapper_bone)
     actor_leg.SetMapper(mapper_leg)
@@ -310,6 +320,7 @@ def main():
     ren_3 = get_renderer(actors_list + actors_step_3(contour_filter_leg), colors.GetColor3d("background_step3"), cam)
     ren_4 = get_renderer([actor_outline] + actors_step_4(mapper_bone, mapper_leg), colors.GetColor3d("background_step4"), cam)
 
+    # Position configuration in the window.
     top_left = (0, 0.5, 0.5, 1)
     top_right = (0.5, 0.5, 1, 1)
     bottom_left = (0, 0, 0.5, 0.5)
@@ -321,11 +332,13 @@ def main():
     ren_4.SetViewport(bottom_right)
 
     ren_win = vtk.vtkRenderWindow()
-    ren_win.AddRenderer(ren_1)
-    ren_win.AddRenderer(ren_2)
-    ren_win.AddRenderer(ren_3)
-    ren_win.AddRenderer(ren_4)
-    ren_win.SetSize(800, 800)
+
+    # Adding renderers to the window.
+    renderers = [ren_1, ren_2, ren_3, ren_4]
+    for ren in renderers:
+        ren_win.AddRenderer(ren)
+
+    ren_win.SetSize(WINDOW_WIDTH, WINDOW_HEIGHT)
 
     print("Create a renderwindowinteractor")
     # Mouse move
