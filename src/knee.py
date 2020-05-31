@@ -1,7 +1,9 @@
+import os
+
 import vtk
 import time
 
-#All color skin/bone and step background
+# All color skin/bone and step background
 colors = vtk.vtkNamedColors()
 colors.SetColor("SkinColor", [201, 148, 150, 255])
 colors.SetColor("BoneColor", [222, 222, 222, 255])
@@ -11,6 +13,8 @@ colors.SetColor("background_step2", [203, 254, 205, 255])
 colors.SetColor("background_step3", [205, 203, 255, 255])
 colors.SetColor("background_step4", [205, 203, 205, 255])
 
+FILENAME = "step4.vtk"
+
 
 def read_slc_file(filename):
     print("Reading SLC file")
@@ -18,7 +22,31 @@ def read_slc_file(filename):
     reader.SetFileName(filename)
     reader.Update()
 
-    print(reader)
+    return reader
+
+
+def writer_vtk(filename, data):
+    """
+    TODO
+    :param filename: the name of the file
+    :param data: TODO
+    :return: void
+    """
+    writer = vtk.vtkDataSetWriter()
+    writer.SetFileName(filename)
+    writer.SetInputData(data)
+    writer.Write()
+
+
+def reader_vtk(filename):
+    """
+    TODO
+    :param filename: the name of the file
+    :return: TODO
+    """
+    reader = vtk.vtkPolyDataReader()
+    reader.SetFileName(filename)
+    reader.Update()
     return reader
 
 
@@ -46,7 +74,7 @@ def make_camera():
     cam.SetPosition(0, 1, 0)
     cam.SetViewUp(0, 0, 1)
     cam.Roll(180.)
-    cam.Azimuth(90.)  # TODO 180
+    cam.Azimuth(180.)  # TODO 180
 
     return cam
 
@@ -97,10 +125,11 @@ def actors_step_1(contour_filter_leg):
     # End step 1
     return [actor_tube]
 
+
 def clipping_skin_with_sphere(contour_filter_leg):
     sphere = vtk.vtkSphere()
     sphere.SetRadius(50)
-    sphere.SetCenter(75, 35, 110)
+    sphere.SetCenter(75, 40, 110)
 
     clipper = vtk.vtkClipPolyData()
     clipper.SetInputConnection(contour_filter_leg.GetOutputPort())
@@ -122,7 +151,6 @@ def clipping_skin_with_sphere(contour_filter_leg):
 def actors_step_2(contour_filter_leg):
     # Clipping the knee skin with a sphere
     actor_leg, _ = clipping_skin_with_sphere(contour_filter_leg)
-
 
     # transparency and backface property
     prop = vtk.vtkProperty()
@@ -160,6 +188,34 @@ def actors_step_3(contour_filter_leg):
     return [actor_leg, actor]
 
 
+def actors_step_4(mapper_bone, mapper_leg):
+    print('start step 4')
+    start = time.perf_counter()
+
+    if not os.path.isfile(FILENAME):
+        distance_filter = vtk.vtkDistancePolyDataFilter()
+        distance_filter.SetInputData(0, mapper_bone.GetInput())
+        distance_filter.SetInputData(1, mapper_leg.GetInput())
+        distance_filter.SignedDistanceOff()
+        distance_filter.Update()
+
+        writer_vtk(FILENAME, distance_filter.GetOutput())
+
+    reader = reader_vtk(FILENAME)
+
+    end = time.perf_counter()
+    print(f"End of step 4 in: {end - start:0.4f} seconds")
+
+    mapper_distance = vtk.vtkPolyDataMapper()
+    mapper_distance.SetInputData(reader.GetOutput())
+    mapper_distance.SetScalarRange(reader.GetOutput().GetPointData().GetScalars().GetRange())
+    
+    actor_distance = vtk.vtkActor()
+    actor_distance.SetMapper(mapper_distance)
+
+    return [actor_distance]
+
+
 def main():
     start = time.perf_counter()
     reader_slc_data = read_slc_file('vw_knee.slc')
@@ -173,7 +229,7 @@ def main():
     outline.SetInputConnection(reader_slc_data.GetOutputPort())
 
     mapper_bone, _ = get_mapper(reader_slc_data, 72.0)
-    mapper_leg, contour_filter_leg = get_mapper(reader_slc_data, 52.0)
+    mapper_leg, contour_filter_leg = get_mapper(reader_slc_data, 47.0)
 
     mapper_outline = vtk.vtkPolyDataMapper()
     mapper_outline.SetInputConnection(outline.GetOutputPort())
@@ -202,7 +258,7 @@ def main():
     ren_1 = get_renderer(actors_list + actors_step_1(contour_filter_leg), colors.GetColor3d("background_step1"), cam)
     ren_2 = get_renderer(actors_list + actors_step_2(contour_filter_leg), colors.GetColor3d("background_step2"), cam)
     ren_3 = get_renderer(actors_list + actors_step_3(contour_filter_leg), colors.GetColor3d("background_step3"), cam)
-    ren_4 = get_renderer(actors_list, colors.GetColor3d("background_step4"), cam)
+    ren_4 = get_renderer([actor_outline] + actors_step_4(mapper_bone, mapper_leg), colors.GetColor3d("background_step4"), cam)
 
     top_left = (0, 0.5, 0.5, 1)
     top_right = (0.5, 0.5, 1, 1)
@@ -226,9 +282,15 @@ def main():
     render_wind_interactor = vtk.vtkRenderWindowInteractor()
     render_wind_interactor.SetRenderWindow(ren_win)
 
+    print("Render")
     ren_win.Render()
 
-    print("Render")
+    # Little animation at start
+    for i in range(0, 360):
+        time.sleep(0.05)
+        cam.Azimuth(1)
+        ren_win.Render()
+
     # Enable user interface interactor
     render_wind_interactor.Initialize()
     ren_win.Render()
