@@ -1,7 +1,6 @@
 import os
-
-import vtk
 import time
+import vtk
 
 # All color skin/bone and step background
 colors = vtk.vtkNamedColors()
@@ -13,7 +12,7 @@ colors.SetColor("background_step2", [203, 254, 205, 255])
 colors.SetColor("background_step3", [205, 203, 255, 255])
 colors.SetColor("background_step4", [205, 203, 205, 255])
 
-FILENAME = "step4.vtk"
+FILENAME_STEP_4 = "step4.vtk"
 
 
 def read_slc_file(filename):
@@ -27,9 +26,9 @@ def read_slc_file(filename):
 
 def writer_vtk(filename, data):
     """
-    TODO
+    Util function to create a vtk file
     :param filename: the name of the file
-    :param data: TODO
+    :param data: A Polydata you wish to write
     :return: void
     """
     writer = vtk.vtkDataSetWriter()
@@ -40,9 +39,9 @@ def writer_vtk(filename, data):
 
 def reader_vtk(filename):
     """
-    TODO
+    Util function to read from a vtk file
     :param filename: the name of the file
-    :return: TODO
+    :return: a poly data object
     """
     reader = vtk.vtkPolyDataReader()
     reader.SetFileName(filename)
@@ -51,6 +50,13 @@ def reader_vtk(filename):
 
 
 def get_mapper(reader_slc_data, counter_value):
+    """
+    Gets the mapper object from an SLC Data
+    Example: 72.0 works to get the bone, 50~ish for the leg
+    :param reader_slc_data: The data
+    :param counter_value: The layer to extract from
+    :return: A Mapper object
+    """
     mapper = vtk.vtkPolyDataMapper()
     mapper.SetInputConnection(reader_slc_data.GetOutputPort())
 
@@ -70,16 +76,27 @@ def get_mapper(reader_slc_data, counter_value):
 
 
 def make_camera():
+    """
+    Creates a camera object
+    :return: A camera object
+    """
     cam = vtk.vtkCamera()
     cam.SetPosition(0, 1, 0)
     cam.SetViewUp(0, 0, 1)
     cam.Roll(180.)
-    cam.Azimuth(180.)  # TODO 180
+    cam.Azimuth(180.)
 
     return cam
 
 
 def get_renderer(actors_list, bg_color, cam):
+    """
+    Makes a renderer object from an actor list
+    :param actors_list: The list of actors you wish to display
+    :param bg_color: The background of the scene
+    :param cam: the camera object to use
+    :return: A renderer object
+    """
     ren = vtk.vtkRenderer()
 
     for ac in actors_list:
@@ -94,6 +111,11 @@ def get_renderer(actors_list, bg_color, cam):
 
 
 def actors_step_1(contour_filter_leg):
+    """
+    Creates the visualization actors for step 1
+    :param contour_filter_leg: The data SLC from the leg
+    :return: A list with the tube actor
+    """
     # Step 1
     plane = vtk.vtkPlane()
     plane.SetOrigin(0, 0, 0)
@@ -127,6 +149,13 @@ def actors_step_1(contour_filter_leg):
 
 
 def clipping_skin_with_sphere(contour_filter_leg):
+    """
+    Makes an actor for the leg which cuts it using a clipper
+    The goal here is to make a boolean difference between
+    the leg and a sphere placed on the knee area.
+    :param contour_filter_leg: The raw SLC data for the leg
+    :return: Leg cut actor, and the sphere
+    """
     sphere = vtk.vtkSphere()
     sphere.SetRadius(50)
     sphere.SetCenter(75, 40, 110)
@@ -149,6 +178,11 @@ def clipping_skin_with_sphere(contour_filter_leg):
 
 
 def actors_step_2(contour_filter_leg):
+    """
+    Creates the visualization actors for step 2
+    :param contour_filter_leg: The data SLC from the leg
+    :return: A list with the leg actor
+    """
     # Clipping the knee skin with a sphere
     actor_leg, _ = clipping_skin_with_sphere(contour_filter_leg)
 
@@ -163,6 +197,11 @@ def actors_step_2(contour_filter_leg):
 
 
 def actors_step_3(contour_filter_leg):
+    """
+    Creates the visualization actors for step 3
+    :param contour_filter_leg: The data SLC from the leg
+    :return: The leg actor and the sphere actor
+    """
     # Clipping the knee skin with a sphere
     actor_leg, sphere = clipping_skin_with_sphere(contour_filter_leg)
 
@@ -189,19 +228,25 @@ def actors_step_3(contour_filter_leg):
 
 
 def actors_step_4(mapper_bone, mapper_leg):
+    """
+    Creates the visualization actors for step 4
+    :param mapper_bone: The Mapper of the bone
+    :param mapper_leg: The Mapper of the leg
+    :return: The list with the distance bone actor
+    """
     print('start step 4')
     start = time.perf_counter()
 
-    if not os.path.isfile(FILENAME):
+    if not os.path.isfile(FILENAME_STEP_4):
         distance_filter = vtk.vtkDistancePolyDataFilter()
         distance_filter.SetInputData(0, mapper_bone.GetInput())
         distance_filter.SetInputData(1, mapper_leg.GetInput())
         distance_filter.SignedDistanceOff()
         distance_filter.Update()
 
-        writer_vtk(FILENAME, distance_filter.GetOutput())
+        writer_vtk(FILENAME_STEP_4, distance_filter.GetOutput())
 
-    reader = reader_vtk(FILENAME)
+    reader = reader_vtk(FILENAME_STEP_4)
 
     end = time.perf_counter()
     print(f"End of step 4 in: {end - start:0.4f} seconds")
@@ -217,6 +262,11 @@ def actors_step_4(mapper_bone, mapper_leg):
 
 
 def main():
+    """
+    The main function
+    :return: void
+    """
+
     start = time.perf_counter()
     reader_slc_data = read_slc_file('vw_knee.slc')
     end = time.perf_counter()
